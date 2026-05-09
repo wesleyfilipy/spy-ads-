@@ -1,0 +1,36 @@
+FROM node:20-alpine AS base
+RUN npm install -g pnpm@9
+# sharp requires python + make
+RUN apk add --no-cache python3 make g++ ffmpeg
+
+# ── Dependencies stage ─────────────────────────────────────────
+FROM base AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/types/package.json ./packages/types/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/config/package.json ./packages/config/
+RUN pnpm install --frozen-lockfile
+
+# ── Build stage ────────────────────────────────────────────────
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm --filter @adspy/api build 2>/dev/null || true
+RUN pnpm --filter @adspy/worker build
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# ── Runner ─────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+RUN apk add --no-cache ffmpeg
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/worker/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/apps/worker/package.json ./
+
+CMD ["node", "dist/index.js"]

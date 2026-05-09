@@ -1,0 +1,40 @@
+FROM node:20-alpine AS base
+RUN npm install -g pnpm@9
+
+# ── Dependencies stage ─────────────────────────────────────────
+FROM base AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/types/package.json ./packages/types/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/config/package.json ./packages/config/
+RUN pnpm install --frozen-lockfile
+
+# ── Build stage ────────────────────────────────────────────────
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm --filter @adspy/types build 2>/dev/null || true
+RUN pnpm --filter @adspy/utils build 2>/dev/null || true
+RUN pnpm --filter @adspy/config build 2>/dev/null || true
+RUN pnpm --filter @adspy/api build
+
+# Generate Prisma client
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# ── Production stage ───────────────────────────────────────────
+FROM node:20-alpine AS runner
+RUN npm install -g pnpm@9
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/apps/api/package.json ./
+
+EXPOSE 4000
+CMD ["node", "dist/index.js"]
