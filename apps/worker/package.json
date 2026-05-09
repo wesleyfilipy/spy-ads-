@@ -10,9 +10,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@adspy/config": "*",
-    "@adspy/types": "*",
-    "@adspy/utils": "*",
+    "@adspy/config": "workspace:*",
+    "@adspy/types": "workspace:*",
+    "@adspy/utils": "workspace:*",
     "@aws-sdk/client-s3": "^3.717.0",
     "@prisma/client": "^6.2.1",
     "axios": "^1.7.9",
