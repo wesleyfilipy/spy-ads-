@@ -15,6 +15,7 @@ import {
   Play,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { apiGet, apiPost } from '@/lib/api';
 import { formatDate } from '@adspy/utils';
@@ -53,7 +54,8 @@ interface AdDetail {
   }>;
 }
 
-export default function AdDetailPage({ params }: { params: { id: string } }) {
+export default function AdDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const { accessToken } = useAuthStore();
   const [ad, setAd] = useState<AdDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,13 +65,13 @@ export default function AdDetailPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!accessToken) return;
 
-    apiGet<{ success: boolean; data: AdDetail }>(`/api/ads/${params.id}`, accessToken)
+    apiGet<{ success: boolean; data: AdDetail }>(`/api/ads/${id}`, accessToken)
       .then((res) => {
         setAd(res.data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [params.id, accessToken]);
+  }, [id, accessToken]);
 
   async function handleFavorite() {
     if (!accessToken || !ad) return;
