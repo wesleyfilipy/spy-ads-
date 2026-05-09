@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AdSpy — Side Panel</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="loading-view" class="view">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="login-view" class="view hidden">
+        <div class="sp-header">
+          <span class="logo">⚡ AdSpy</span>
+        </div>
+        <div class="sp-content">
+          <h2>Sign in to start mining</h2>
+          <form id="login-form">
+            <input type="email" id="email" placeholder="Email" required />
+            <input type="password" id="password" placeholder="Password" required />
+            <div id="error" class="error hidden"></div>
+            <button type="submit" id="login-btn">Sign In</button>
+          </form>
+        </div>
+      </div>
+      <div id="main-view" class="view hidden">
+        <!-- Header -->
+        <div class="sp-header">
+          <span class="logo">⚡ AdSpy</span>
+          <div class="header-actions">
+            <span id="plan-badge" class="plan-badge"></span>
+            <button id="logout-btn" class="icon-btn" title="Logout">⎋</button>
+          </div>
+        </div>
+
+        <!-- Mining controls -->
+        <div class="sp-section">
+          <div class="mining-card">
+            <div class="mining-status-row">
+              <div>
+                <div class="label">Auto-Mining</div>
+                <div id="mining-status-text" class="status-text inactive">Inactive</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="auto-mine-toggle" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span id="session-ads" class="stat-num">0</span>
+                <span class="stat-lbl">Session</span>
+              </div>
+              <div class="stat-item">
+                <span id="total-ads" class="stat-num">—</span>
+                <span class="stat-lbl">Total Ads</span>
+              </div>
+              <div class="stat-item">
+                <span id="active-ads" class="stat-num">—</span>
+                <span class="stat-lbl">Active</span>
+              </div>
+              <div class="stat-item">
+                <span id="scaled-ads" class="stat-num">—</span>
+                <span class="stat-lbl">Scaled</span>
+              </div>
+            </div>
+            <button id="mine-now-btn" class="btn-primary">⚡ Mine Now</button>
+          </div>
+        </div>
+
+        <!-- Quick filters -->
+        <div class="sp-section">
+          <div class="section-title">Quick Filters</div>
+          <div class="filter-chips">
+            <button class="chip active" data-filter="">All</button>
+            <button class="chip" data-filter="isScaled=true">🔥 Scaled</button>
+            <button class="chip" data-filter="status=ACTIVE">✅ Active</button>
+            <button class="chip" data-filter="type=VIDEO">🎥 Video</button>
+            <button class="chip" data-filter="isDuplicate=true">📋 Dupes</button>
+          </div>
+        </div>
+
+        <!-- Live feed -->
+        <div class="sp-section flex-1">
+          <div class="section-title">
+            Live Feed
+            <span id="feed-count" class="feed-count"></span>
+          </div>
+          <div id="ad-feed" class="ad-feed">
+            <div class="empty-state">
+              <div class="empty-icon">🔍</div>
+              <div>Navigate to Facebook Ads Library and click Mine Now</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer links -->
+        <div class="sp-footer">
+          <a id="dashboard-link" href="#" class="footer-link">Open Dashboard</a>
+          <span class="dot">·</span>
+          <a href="https://www.facebook.com/ads/library/" target="_blank" class="footer-link">Ads Library</a>
+        </div>
+      </div>
+    </div>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

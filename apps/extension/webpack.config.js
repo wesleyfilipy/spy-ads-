@@ -10,6 +10,7 @@ module.exports = {
     'background/background': './src/background/background.ts',
     'content/content': './src/content/content.ts',
     'popup/popup': './src/popup/popup.ts',
+    'sidepanel/sidepanel': './src/sidepanel/sidepanel.ts',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -38,6 +39,11 @@ module.exports = {
       template: './src/popup/popup.html',
       filename: 'popup/popup.html',
       chunks: ['popup/popup'],
+    }),
+    new HtmlWebpackPlugin({
+      template: './src/sidepanel/sidepanel.html',
+      filename: 'sidepanel/sidepanel.html',
+      chunks: ['sidepanel/sidepanel'],
     }),
     new CopyPlugin({
       patterns: [

@@ -208,6 +208,18 @@ model Ad {
   currency         String?
   rawData          Json?
 
+  // Intelligence scores
+  viralityScore       Int?
+  scaleScore          Int?
+  aggressivenessScore Int?
+  repetitionScore     Int?
+  overallScore        Int?
+  isWinningCreative   Boolean  @default(false)
+
+  // Platform detection
+  detectedPlatform  String?
+  detectedPixels    String[]
+
   creatives        Creative[]
   adCountries      AdCountry[]
   adLanguages      AdLanguage[]
@@ -224,6 +236,8 @@ model Ad {
   @@index([isDuplicate])
   @@index([duplicateGroupId])
   @@index([createdAt])
+  @@index([overallScore])
+  @@index([isWinningCreative])
   @@map("ads")
 }
 

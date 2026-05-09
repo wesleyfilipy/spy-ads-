@@ -16,6 +16,9 @@
     },
     "default_title": "AdSpy Miner"
   },
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
   "background": {
     "service_worker": "background/background.js",
     "type": "module"
@@ -35,7 +38,9 @@
     "alarms",
     "notifications",
     "activeTab",
-    "scripting"
+    "scripting",
+    "sidePanel",
+    "tabs"
   ],
   "host_permissions": [
     "https://www.facebook.com/ads/library/*",

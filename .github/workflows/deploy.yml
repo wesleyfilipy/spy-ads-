@@ -1,0 +1,174 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy'
+        required: false
+        default: 'all'
+        type: choice
+        options: [all, api, web, worker]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/adspy
+
+jobs:
+  # ── Build & Push Docker Images ────────────────────────────────
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [api, worker, web]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+
+  # ── Deploy API to Railway ─────────────────────────────────────
+  deploy-api:
+    name: Deploy API
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.service == 'all' || github.event.inputs.service == 'api' || github.event.inputs.service == ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API to Railway
+        run: railway up --service adspy-api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # ── Deploy Worker to Railway ──────────────────────────────────
+  deploy-worker:
+    name: Deploy Worker
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.service == 'all' || github.event.inputs.service == 'worker' || github.event.inputs.service == ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Worker to Railway
+        run: railway up --service adspy-worker
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # ── Deploy Web to Vercel ──────────────────────────────────────
+  deploy-web:
+    name: Deploy Web
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.service == 'all' || github.event.inputs.service == 'web' || github.event.inputs.service == ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel
+        run: |
+          npm install -g vercel
+          vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/web
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ── Run DB migrations ─────────────────────────────────────────
+  migrate:
+    name: Run Migrations
+    needs: [deploy-api]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run Prisma migrations
+        run: pnpm --filter @adspy/api exec prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # ── Health check post-deploy ──────────────────────────────────
+  health-check:
+    name: Health Check
+    needs: [deploy-api, deploy-web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for services to start
+        run: sleep 30
+
+      - name: Check API health
+        run: |
+          ATTEMPTS=0
+          MAX=10
+          until curl -sf "${{ secrets.API_URL }}/health" || [ $ATTEMPTS -eq $MAX ]; do
+            echo "Attempt $((++ATTEMPTS))/$MAX — waiting..."
+            sleep 10
+          done
+          curl -sf "${{ secrets.API_URL }}/health" && echo "✅ API is healthy"
+
+      - name: Check Web health
+        run: |
+          curl -sf "${{ secrets.WEB_URL }}" && echo "✅ Web is healthy"
+        continue-on-error: true
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Health check failed! Check deployment logs."

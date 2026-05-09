@@ -10,11 +10,15 @@ import { notFound } from './middleware/notFound';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import adRoutes from './routes/ads';
+import searchRoutes from './routes/search';
 import favoriteRoutes from './routes/favorites';
 import subscriptionRoutes from './routes/subscriptions';
 import adminRoutes from './routes/admin';
+import adminAnalyticsRoutes from './routes/adminAnalytics';
 import miningRoutes from './routes/mining';
+import downloadRoutes from './routes/downloads';
 import webhookRoutes from './routes/webhooks';
+import { antiAbuse, detectBot } from './middleware/security';
 
 const app = express();
 
@@ -51,8 +55,10 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
 }
 
-// ── Rate limiting ──────────────────────────────────────────────
+// ── Rate limiting + Security ───────────────────────────────────
 app.use(globalRateLimiter);
+app.use(antiAbuse);
+app.use(detectBot);
 
 // ── Health check ───────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -63,10 +69,13 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ads', adRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminAnalyticsRoutes);
 app.use('/api/mining', miningRoutes);
+app.use('/api/downloads', downloadRoutes);
 app.use('/webhooks', webhookRoutes);
 
 // ── Error handlers ─────────────────────────────────────────────
