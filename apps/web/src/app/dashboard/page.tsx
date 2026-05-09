@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Search, Eye, Copy, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
-import { apiGet } from '@/lib/api';
 
 interface DashboardStats {
   total: number;
@@ -47,29 +46,36 @@ const StatCard = ({
   </motion.div>
 );
 
+const DEMO_STATS: DashboardStats = {
+  total: 18420,
+  active: 11350,
+  scaled: 3280,
+  duplicates: 940,
+  todayNew: 217,
+};
+
+const DEMO_ADS = [
+  { id: '1', pageName: 'NovaSkin Beauty', domain: 'novaskin.com', status: 'ACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad1/400/300', type: 'IMAGE' }] },
+  { id: '2', pageName: 'FitPro Supplements', domain: 'fitpro.io', status: 'ACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad2/400/300', type: 'IMAGE' }] },
+  { id: '3', pageName: 'LuxWatch Store', domain: 'luxwatch.co', status: 'ACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad3/400/300', type: 'IMAGE' }] },
+  { id: '4', pageName: 'TechGadgets Hub', domain: 'techgadgets.shop', status: 'INACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad4/400/300', type: 'IMAGE' }] },
+  { id: '5', pageName: 'PetCare Plus', domain: 'petcareplus.com', status: 'ACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad5/400/300', type: 'IMAGE' }] },
+  { id: '6', pageName: 'HomeDecor Pro', domain: 'homedecorpro.net', status: 'ACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad6/400/300', type: 'IMAGE' }] },
+  { id: '7', pageName: 'SportX Gear', domain: 'sportxgear.com', status: 'ACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad7/400/300', type: 'IMAGE' }] },
+  { id: '8', pageName: 'EcoLife Brands', domain: 'ecolife.store', status: 'INACTIVE', creatives: [{ thumbnailUrl: 'https://picsum.photos/seed/ad8/400/300', type: 'IMAGE' }] },
+];
+
 export default function DashboardPage() {
-  const { accessToken, user } = useAuthStore();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentAds, setRecentAds] = useState<unknown[]>([]);
-
-  useEffect(() => {
-    if (!accessToken) return;
-
-    apiGet<{ success: boolean; data: DashboardStats }>('/api/ads/stats/overview', accessToken)
-      .then((res) => setStats(res.data))
-      .catch(() => {});
-
-    apiGet<{ success: boolean; data: unknown[] }>('/api/ads?limit=8&sortBy=createdAt&sortOrder=desc', accessToken)
-      .then((res) => setRecentAds(Array.isArray(res.data) ? res.data : []))
-      .catch(() => {});
-  }, [accessToken]);
+  const { user } = useAuthStore();
+  const [stats] = useState<DashboardStats>(DEMO_STATS);
+  const [recentAds] = useState<unknown[]>(DEMO_ADS);
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">
-          Welcome back, {user?.name?.split(' ')[0]} 👋
+          Welcome back, {user?.name?.split(' ')[0] ?? 'Explorer'} 👋
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
           Here&apos;s what&apos;s happening in the ads world today.

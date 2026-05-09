@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -27,18 +26,14 @@ const NAV_ITEMS = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
+const DEMO_USER = { name: 'Demo User', email: 'demo@adspy.com', role: 'USER' };
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, accessToken, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
-  useEffect(() => {
-    if (!accessToken) {
-      router.push('/login');
-    }
-  }, [accessToken, router]);
-
-  if (!accessToken) return null;
+  const displayUser = user ?? DEMO_USER;
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -71,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
 
-          {user?.role === 'ADMIN' && (
+          {displayUser?.role === 'ADMIN' && (
             <Link
               href="/dashboard/admin"
               className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -89,11 +84,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 border-t border-border/50">
           <div className="flex items-center gap-3 px-3 py-2.5 mb-2">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
-              {user?.name?.[0]?.toUpperCase() ?? '?'}
+              {displayUser?.name?.[0]?.toUpperCase() ?? 'D'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-sm font-medium truncate">{displayUser?.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{displayUser?.email}</p>
             </div>
           </div>
           <button
