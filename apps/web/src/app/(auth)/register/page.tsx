@@ -101,7 +101,24 @@ export default function RegisterPage() {
             <a href="#" className="text-primary hover:underline">Privacy Policy</a>
           </p>
 
-          <p className="text-center text-muted-foreground text-sm mt-6">
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs text-muted-foreground">
+              <span className="bg-background px-3">or</span>
+            </div>
+          </div>
+
+          <Link
+            href="/dashboard"
+            className="w-full flex items-center justify-center gap-2 border border-border hover:border-primary/40 hover:bg-primary/5 text-foreground font-semibold py-3 rounded-xl transition-all text-sm"
+          >
+            <Zap className="w-4 h-4 text-primary" />
+            Explore Demo — No account needed
+          </Link>
+
+          <p className="text-center text-muted-foreground text-sm mt-4">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline font-medium">
               Sign in

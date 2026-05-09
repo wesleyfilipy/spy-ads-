@@ -89,10 +89,10 @@ export default function LandingPage() {
               Sign in
             </Link>
             <Link
-              href="/register"
+              href="/dashboard"
               className="text-sm bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
             >
-              Get Started
+              Ver Demo
             </Link>
           </div>
         </div>
@@ -130,10 +130,10 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href="/register"
+                href="/dashboard"
                 className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(99,102,241,0.4)]"
               >
-                Start Free Trial
+                Explorar Demo Grátis
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
