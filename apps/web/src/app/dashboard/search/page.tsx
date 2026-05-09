@@ -1,279 +1,184 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, X, TrendingUp, Eye, ExternalLink, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { Search, ExternalLink, Globe } from 'lucide-react';
 import { APP_CONFIG } from '@adspy/config';
 
-interface FbAd {
-  id: string;
-  pageName: string;
-  pageId: string;
-  headline: string;
-  body: string;
-  snapshotUrl: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-  platforms: string[];
-  impressions?: { lower_bound: string; upper_bound: string };
-  spend?: { lower_bound: string; upper_bound: string };
-  currency?: string;
-}
+const COUNTRIES = [
+  { code: 'BR', name: '🇧🇷 Brasil' },
+  { code: 'US', name: '🇺🇸 Estados Unidos' },
+  { code: 'ALL', name: '🌍 Todos os países' },
+  ...APP_CONFIG.supportedCountries
+    .filter((c) => !['BR', 'US'].includes(c.code))
+    .map((c) => ({ code: c.code, name: c.name })),
+];
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<FbAd[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [noToken, setNoToken] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [countries, setCountries] = useState('BR,US');
-  const [searched, setSearched] = useState(false);
+  const [country, setCountry] = useState('BR');
+  const [adType, setAdType] = useState('ALL');
+  const [status, setStatus] = useState('active');
+  const [iframeUrl, setIframeUrl] = useState('');
+  const [iframeBlocked, setIframeBlocked] = useState(false);
 
-  async function doSearch(term = query) {
-    setLoading(true);
-    setError('');
-    setSearched(true);
-
-    try {
-      const params = new URLSearchParams({ q: term || 'produto', countries, limit: '24' });
-      const res = await fetch(`/api/ads/search?${params}`);
-      const json = await res.json();
-
-      if (json.error === 'FACEBOOK_ACCESS_TOKEN not configured') {
-        setNoToken(true);
-        setResults([]);
-      } else if (json.error) {
-        setError(json.error);
-        setResults([]);
-      } else {
-        setNoToken(false);
-        setResults(json.data ?? []);
-      }
-    } catch {
-      setError('Falha ao conectar. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
+  function buildUrl(q = query) {
+    const params = new URLSearchParams({
+      active_status: status,
+      ad_type: adType,
+      country: country,
+      media_type: 'all',
+      ...(q && { q }),
+    });
+    return `https://www.facebook.com/ads/library/?${params.toString()}`;
   }
 
-  useEffect(() => {
-    doSearch('produto');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  function handleSearch() {
+    const url = buildUrl();
+    setIframeUrl(url);
+    setIframeBlocked(false);
+  }
+
+  function openInFacebook() {
+    window.open(buildUrl(), '_blank');
+  }
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Search Ads</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Busca em tempo real na <span className="text-primary font-semibold">Meta Ads Library</span>
-        </p>
-      </div>
-
-      {/* Search bar */}
-      <div className="flex gap-3 mb-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-            placeholder="Pesquise por marca, produto, nicho, copy..."
-            className="w-full bg-secondary border border-border rounded-xl pl-11 pr-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-          />
+    <div className="flex flex-col h-full">
+      {/* Top bar */}
+      <div className="flex-shrink-0 p-6 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe className="w-5 h-5 text-primary" />
+          <h1 className="text-xl font-bold">Meta Ads Library</h1>
+          <span className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-semibold ml-1">
+            Dados reais do Facebook
+          </span>
         </div>
-        <button
-          onClick={() => doSearch()}
-          disabled={loading}
-          className="bg-primary hover:bg-primary/90 disabled:opacity-60 text-white px-6 py-3 rounded-xl font-semibold transition-all"
-        >
-          {loading ? 'Buscando...' : 'Buscar'}
-        </button>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-xl border font-medium text-sm transition-all ${
-            showFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Filter className="w-4 h-4" />
-          Filtros
-        </button>
+
+        <div className="flex flex-wrap gap-3">
+          {/* Search input */}
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Marca, produto, nicho..."
+              className="w-full bg-secondary border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+            />
+          </div>
+
+          {/* Country */}
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))}
+          </select>
+
+          {/* Status */}
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+          >
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+            <option value="all">Todos</option>
+          </select>
+
+          {/* Ad type */}
+          <select
+            value={adType}
+            onChange={(e) => setAdType(e.target.value)}
+            className="bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+          >
+            <option value="ALL">Todos os tipos</option>
+            <option value="IMAGE">Imagem</option>
+            <option value="VIDEO">Vídeo</option>
+            <option value="MEME">Meme</option>
+          </select>
+
+          {/* Search button */}
+          <button
+            onClick={handleSearch}
+            className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
+          >
+            Buscar
+          </button>
+
+          {/* Open in Facebook */}
+          <button
+            onClick={openInFacebook}
+            className="flex items-center gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Abrir no Facebook
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="glass rounded-2xl p-6 mb-6 overflow-hidden"
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase mb-2 block">País</label>
-                <select
-                  value={countries}
-                  onChange={(e) => setCountries(e.target.value)}
-                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-                >
-                  <option value="BR,US">Brasil + EUA</option>
-                  {APP_CONFIG.supportedCountries.map((c) => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={() => { setCountries('BR,US'); doSearch(); }}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-3 h-3" /> Limpar
-                </button>
-              </div>
+      {/* Content area */}
+      <div className="flex-1 relative overflow-hidden">
+        {!iframeUrl ? (
+          /* Empty state */
+          <div className="h-full flex flex-col items-center justify-center text-center p-8">
+            <div className="w-20 h-20 rounded-2xl bg-[#1877F2]/10 border border-[#1877F2]/20 flex items-center justify-center mb-6">
+              <Search className="w-10 h-10 text-[#1877F2]" />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* No token warning */}
-      {noToken && (
-        <div className="glass border border-amber-500/30 bg-amber-500/5 rounded-2xl p-6 mb-6">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-amber-400 mb-1">Token do Facebook não configurado</p>
-              <p className="text-sm text-muted-foreground mb-3">
-                Para ver anúncios reais do Meta Ads Library, adicione o <code className="bg-secondary px-1 rounded">FACEBOOK_ACCESS_TOKEN</code> nas variáveis de ambiente do Vercel.
-              </p>
-              <div className="text-sm space-y-1 text-muted-foreground">
-                <p><span className="text-foreground font-medium">1.</span> Acesse <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">developers.facebook.com/tools/explorer</a></p>
-                <p><span className="text-foreground font-medium">2.</span> Gere um User Access Token com permissão <code className="bg-secondary px-1 rounded">ads_read</code></p>
-                <p><span className="text-foreground font-medium">3.</span> No Vercel → Settings → Environment Variables → adicione <code className="bg-secondary px-1 rounded">FACEBOOK_ACCESS_TOKEN</code></p>
-                <p><span className="text-foreground font-medium">4.</span> Redeploy o projeto</p>
-              </div>
+            <h2 className="text-2xl font-bold mb-3">Pesquise anúncios reais do Facebook</h2>
+            <p className="text-muted-foreground max-w-md mb-6">
+              Digite uma palavra-chave acima e clique em <strong>Buscar</strong> para ver anúncios reais
+              diretamente da Biblioteca de Anúncios do Meta.
+            </p>
+            <div className="flex flex-wrap gap-2 justify-center text-sm">
+              {['suplementos', 'curso online', 'emagrecimento', 'dropshipping', 'skincare', 'investimentos'].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => { setQuery(suggestion); handleSearch(); }}
+                  className="bg-secondary hover:bg-primary/10 hover:text-primary hover:border-primary/30 border border-border px-3 py-1.5 rounded-full transition-all"
+                >
+                  {suggestion}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="glass border border-destructive/30 bg-destructive/5 rounded-2xl p-4 mb-6 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Results count */}
-      {!noToken && searched && !loading && (
-        <p className="text-muted-foreground text-sm mb-4">
-          <span className="text-foreground font-semibold">{results.length}</span> anúncios encontrados
-          {query && <> para &quot;<span className="text-primary">{query}</span>&quot;</>}
-        </p>
-      )}
-
-      {/* Loading skeletons */}
-      {loading && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="glass rounded-xl overflow-hidden animate-pulse">
-              <div className="aspect-video bg-secondary" />
-              <div className="p-3 space-y-2">
-                <div className="h-4 bg-secondary rounded w-3/4" />
-                <div className="h-3 bg-secondary rounded w-1/2" />
-              </div>
+        ) : iframeBlocked ? (
+          /* Iframe blocked fallback */
+          <div className="h-full flex flex-col items-center justify-center text-center p-8">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+              <ExternalLink className="w-8 h-8 text-amber-400" />
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Results */}
-      {!loading && !noToken && results.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <AnimatePresence>
-            {results.map((ad, i) => (
-              <motion.div
-                key={ad.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="glass rounded-xl overflow-hidden hover:border-primary/30 transition-all group"
-              >
-                {/* Snapshot iframe preview */}
-                <div className="aspect-video bg-secondary relative overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center">
-                    <Eye className="w-6 h-6 text-muted-foreground opacity-30 mb-2" />
-                    {ad.headline && (
-                      <p className="text-xs font-semibold line-clamp-2 text-foreground">{ad.headline}</p>
-                    )}
-                    {ad.body && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{ad.body}</p>
-                    )}
-                  </div>
-
-                  <div className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${
-                    ad.status === 'ACTIVE' ? 'bg-emerald-500/80 text-white' : 'bg-black/60 text-white'
-                  }`}>
-                    {ad.status === 'ACTIVE' ? 'ATIVO' : 'INATIVO'}
-                  </div>
-
-                  {ad.platforms?.includes('instagram') && (
-                    <div className="absolute top-2 left-2">
-                      <span className="bg-pink-500/80 text-white text-xs px-2 py-0.5 rounded-full font-bold">IG</span>
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <a
-                      href={ad.snapshotUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 bg-primary text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-                    >
-                      <Eye className="w-3 h-3" /> Ver no Meta
-                    </a>
-                  </div>
-                </div>
-
-                <div className="p-3">
-                  <p className="font-semibold text-sm truncate">{ad.pageName}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-muted-foreground text-xs truncate flex-1">
-                      {ad.startDate ? new Date(ad.startDate).toLocaleDateString('pt-BR') : '—'}
-                    </span>
-                    {ad.snapshotUrl && (
-                      <a href={ad.snapshotUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                  {ad.impressions && (
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <TrendingUp className="w-3 h-3 text-amber-400" />
-                      <span className="text-xs text-amber-400 font-medium">
-                        {Number(ad.impressions.lower_bound).toLocaleString()}–{Number(ad.impressions.upper_bound).toLocaleString()} imp.
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* No results */}
-      {!loading && !noToken && searched && results.length === 0 && !error && (
-        <div className="glass rounded-2xl p-16 text-center text-muted-foreground">
-          <Search className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="font-medium text-lg">Nenhum resultado encontrado</p>
-          <p className="text-sm mt-1">Tente outras palavras-chave ou mude o país</p>
-        </div>
-      )}
+            <h2 className="text-xl font-bold mb-2">Abrir no Facebook</h2>
+            <p className="text-muted-foreground max-w-md mb-6 text-sm">
+              O Facebook bloqueia incorporação direta por segurança. Clique abaixo para ver os anúncios na Biblioteca oficial.
+            </p>
+            <button
+              onClick={openInFacebook}
+              className="flex items-center gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white px-6 py-3 rounded-xl font-semibold transition-all"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Abrir Biblioteca de Anúncios
+            </button>
+            <p className="text-xs text-muted-foreground mt-4">
+              URL: <code className="text-primary text-xs">{iframeUrl.slice(0, 80)}...</code>
+            </p>
+          </div>
+        ) : (
+          /* Iframe */
+          <iframe
+            key={iframeUrl}
+            src={iframeUrl}
+            className="w-full h-full border-0"
+            title="Meta Ads Library"
+            onError={() => setIframeBlocked(true)}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+          />
+        )}
+      </div>
     </div>
   );
 }
